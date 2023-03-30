@@ -91,7 +91,7 @@ if __name__ == "__main__":
             while (MODE == "NONE") and (not rospy.is_shutdown()):
                 rate.sleep()
             
-        elif (MODE == "LAUNCH") and (not rospy.is_shutdown()):
+        elif ((MODE == "LAUNCH") or (MODE == "TEST")) and not rospy.is_shutdown():
             
             pose = PoseStamped()
             pose.pose.position.x = 0
@@ -99,22 +99,7 @@ if __name__ == "__main__":
             pose.pose.position.z = 1.5
             
             # Continue publishing this setpoint 
-            while (MODE == "LAUNCH") and (not rospy.is_shutdown())
-
-                # Send continuous stream of setpoints
-                local_pos_pub.publish(pose)
-
-                rate.sleep()
-
-        elif (MODE == "TEST") and (not rospy.is_shutdown()):
-
-            pose = PoseStamped()
-            pose.pose.position.x = 0
-            pose.pose.position.y = 0
-            pose.pose.position.z = 1.5
-            
-            # Continue publishing this setpoint 
-            while (MODE == "TEST") and (not rospy.is_shutdown())
+            while ((MODE == "LAUNCH") or (MODE == "TEST")) and not rospy.is_shutdown():
 
                 # Send continuous stream of setpoints
                 local_pos_pub.publish(pose)
