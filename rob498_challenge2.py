@@ -75,8 +75,10 @@ if __name__ == "__main__":
     srv_land = rospy.Service(node_name + '/comm/land', Empty, callback_land)
 
     srv_abort = rospy.Service(node_name + '/comm/abort', Empty, callback_abort)
+    
+    last_req = rospy.Time.now()
 
-    while(not rospy.is_shutdown() ):
+    while(not rospy.is_shutdown()):
 
         # Setpoint publishing MUST be faster than 2Hz
         rate = rospy.Rate(20)
@@ -85,67 +87,73 @@ if __name__ == "__main__":
         while(not rospy.is_shutdown() and not CURR_STATE.connected):
             rate.sleep()
 
-        if (MODE == "LAUNCH"):
+        if (MODE == "NONE") and (not rospy.is_shutdown()):
+            while (MODE == "NONE") and (not rospy.is_shutdown()):
+                rate.sleep()
+            
+        elif (MODE == "LAUNCH") and (not rospy.is_shutdown()):
+            
+            pose = PoseStamped()
+            pose.pose.position.x = 0
+            pose.pose.position.y = 0
+            pose.pose.position.z = 1.5
+            
+            # Continue publishing this setpoint 
+            while (MODE == "LAUNCH") and (not rospy.is_shutdown())
+
+                # Send continuous stream of setpoints
+                local_pos_pub.publish(pose)
+
+                rate.sleep()
+
+        elif (MODE == "TEST") and (not rospy.is_shutdown()):
 
             pose = PoseStamped()
             pose.pose.position.x = 0
             pose.pose.position.y = 0
-            pose.pose.position.z = 2
+            pose.pose.position.z = 1.5
+            
+            # Continue publishing this setpoint 
+            while (MODE == "TEST") and (not rospy.is_shutdown())
 
-            # Send a few setpoints before starting
-            for i in range(100):   
-                if(rospy.is_shutdown()):
-                    break
-
-                local_pos_pub.publish(pose)
-                rate.sleep()
-
-            offb_set_mode = SetModeRequest()
-            offb_set_mode.custom_mode = 'OFFBOARD'
-
-            arm_cmd = CommandBoolRequest()
-            arm_cmd.value = True
-
-            last_req = rospy.Time.now()
-
-            while(not rospy.is_shutdown() and MODE == "LAUNCH"):
-                if(CURR_STATE.mode != "OFFBOARD" and (rospy.Time.now() - last_req) > rospy.Duration(5.0)):
-                    if(set_mode_client.call(offb_set_mode).mode_sent == True):
-                        rospy.loginfo("OFFBOARD enabled")
-                    
-                    last_req = rospy.Time.now()
-                else:
-                    if(not CURR_STATE.armed and (rospy.Time.now() - last_req) > rospy.Duration(5.0)):
-                        if(arming_client.call(arm_cmd).success == True):
-                            rospy.loginfo("Vehicle armed")
-                    
-                        last_req = rospy.Time.now()
-
+                # Send continuous stream of setpoints
                 local_pos_pub.publish(pose)
 
                 rate.sleep()
 
-        elif (MODE == "TEST"):
+        elif (MODE == "LAND") and (not rospy.is_shutdown()):
 
-            rospy.loginfo("Testing has commenced. Hold position.")
+            pose = PoseStamped()
+            pose.pose.position.x = 0
+            pose.pose.position.y = 0
+            pose.pose.position.z = 1.5
+            
+            # Continue publishing this setpoint 
+            while (MODE == "LAND") and (not rospy.is_shutdown())
+            
+                pose.pose.position.z = max(pose.pose.position.z / 1.5, 0.2)
 
-        elif (MODE == "LAND"):
+                # Send continuous stream of setpoints
+                local_pos_pub.publish(pose)
 
-            alt_set_mode = SetModeRequest()
-            alt_set_mode.custom_mode = 'ALTCTL'
+                rate.sleep()
 
-            while(not rospy.is_shutdown() and MODE == "LAND"):
-                if(CURR_STATE.mode != 'ALTCTL' and (rospy.Time.now() - last_req) > rospy.Duration(5.0)):
-                    if(set_mode_client.call(alt_set_mode).mode_sent == True):
-                        rospy.loginfo("ALTITUDE enabled")
-                    
-                    last_req = rospy.Time.now()
-
-        elif (MODE == "ABORT"):
+        elif (MODE == "ABORT") and (not rospy.is_shutdown()):
+            
+            # For redundancy, send a setpoint to 0
+            pose = PoseStamped()
+            pose.pose.position.x = 0
+            pose.pose.position.y = 0
+            pose.pose.position.z = 0
+                     
+            # Send a disarm command
             arm_cmd = CommandBoolRequest()
             arm_cmd.value = False
 
             while(not rospy.is_shutdown() and MODE == "ABORT"):
+                
+                local_pos_pub.publish(pose)
+                
                 if(CURR_STATE.armed and (rospy.Time.now() - last_req) > rospy.Duration(5.0)):
                     if(arming_client.call(arm_cmd).success == True):
                         rospy.loginfo("Vehicle disarmed")
