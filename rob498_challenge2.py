@@ -8,6 +8,7 @@ from std_srvs.srv import Empty, EmptyResponse
 
 # Global mode variable
 MODE = "NONE"
+LOCAL_POSE = PoseStamped()
 
 # Get states from MAVLink
 CURR_STATE = State()
@@ -18,20 +19,28 @@ def state_cb(msg):
 
 # Callback handlers
 def handle_launch():
+    global MODE
     MODE = "LAUNCH"
     print('Launch Requested. Your drone should take off.')
 
 def handle_test():
+    global MODE
     MODE = "TEST"
     print('Test Requested. Your drone should perform the required tasks. Recording starts now.')
 
 def handle_land():
+    global MODE
     MODE = "LAND"
     print('Land Requested. Your drone should land.')
 
 def handle_abort():
+    global MODE
     MODE = "ABORT"
     print('Abort Requested. Your drone should land immediately due to safety considerations')
+
+def pose_cb(msg):
+    global LOCAL_POSE
+    LOCAL_POSE = msg.pose
 
 # Service callbacks
 def callback_launch(request):
@@ -53,19 +62,19 @@ def callback_abort(request):
 
 if __name__ == "__main__":
 
-    node_name = "challenge2_node"
+    global LOCAL_POSE
+    global MODE
+    global CURR_STATE
+
+    node_name = "rob498_drone_12"
 
     rospy.init_node(node_name)
 
     state_sub = rospy.Subscriber("mavros/state", State, callback = state_cb)
 
-    local_pos_pub = rospy.Publisher("mavros/setpoint_position/local", PoseStamped, queue_size=10)
-    
-    rospy.wait_for_service("/mavros/cmd/arming")
-    arming_client = rospy.ServiceProxy("mavros/cmd/arming", CommandBool)    
+    local_pos_sub = rospy.Subscriber("mavros/local_position/pose", PoseStamped , callback = pose_cb) 
 
-    rospy.wait_for_service("/mavros/set_mode")
-    set_mode_client = rospy.ServiceProxy("mavros/set_mode", SetMode)
+    local_pos_pub = rospy.Publisher("mavros/setpoint_position/local", PoseStamped, queue_size=10)
 
     # Challenge 2 Services
     srv_launch = rospy.Service(node_name + '/comm/launch', Empty, callback_launch)
@@ -83,20 +92,30 @@ if __name__ == "__main__":
         # Setpoint publishing MUST be faster than 2Hz
         rate = rospy.Rate(20)
 
-        # Wait for Flight Controller connection
-        while(not rospy.is_shutdown() and not CURR_STATE.connected):
-            rate.sleep()
-
         if (MODE == "NONE") and (not rospy.is_shutdown()):
+	    print("MODE is NONE.")
             while (MODE == "NONE") and (not rospy.is_shutdown()):
                 rate.sleep()
             
         elif ((MODE == "LAUNCH") or (MODE == "TEST")) and not rospy.is_shutdown():
-            
+            print("MODE is LAUNCH or TEST.")
             pose = PoseStamped()
+    	    empty_pose = PoseStamped()
+
+    	    while LOCAL_POSE == empty_pose:
+		print("ERROR: current_local_pose not initialized.")
+		rate.sleep()
+
             pose.pose.position.x = 0
             pose.pose.position.y = 0
-            pose.pose.position.z = 1.5
+            pose.pose.position.z = 1.1
+
+    	    pose.pose.orientation.x = LOCAL_POSE.orientation.x
+            pose.pose.orientation.y = LOCAL_POSE.orientation.y
+            pose.pose.orientation.z = LOCAL_POSE.orientation.z
+            pose.pose.orientation.w = LOCAL_POSE.orientation.w
+
+	    print(pose)
             
             # Continue publishing this setpoint 
             while ((MODE == "LAUNCH") or (MODE == "TEST")) and not rospy.is_shutdown():
@@ -107,14 +126,19 @@ if __name__ == "__main__":
                 rate.sleep()
 
         elif (MODE == "LAND") and (not rospy.is_shutdown()):
-
+	    print("MODE is LAND.")
             pose = PoseStamped()
             pose.pose.position.x = 0
             pose.pose.position.y = 0
-            pose.pose.position.z = 1.5
+            pose.pose.position.z = 1.1
+
+    	    pose.pose.orientation.x = LOCAL_POSE.orientation.x
+            pose.pose.orientation.y = LOCAL_POSE.orientation.y
+            pose.pose.orientation.z = LOCAL_POSE.orientation.z
+            pose.pose.orientation.w = LOCAL_POSE.orientation.w
             
             # Continue publishing this setpoint 
-            while (MODE == "LAND") and (not rospy.is_shutdown())
+            while (MODE == "LAND") and (not rospy.is_shutdown()):
             
                 pose.pose.position.z = max(pose.pose.position.z / 1.5, 0.2)
 
@@ -124,12 +148,17 @@ if __name__ == "__main__":
                 rate.sleep()
 
         elif (MODE == "ABORT") and (not rospy.is_shutdown()):
-            
+            print("MODE is ABORT.")
             # For redundancy, send a setpoint to 0
             pose = PoseStamped()
             pose.pose.position.x = 0
             pose.pose.position.y = 0
             pose.pose.position.z = 0
+
+    	    pose.pose.orientation.x = LOCAL_POSE.orientation.x
+            pose.pose.orientation.y = LOCAL_POSE.orientation.y
+            pose.pose.orientation.z = LOCAL_POSE.orientation.z
+            pose.pose.orientation.w = LOCAL_POSE.orientation.w
                      
             # Send a disarm command
             arm_cmd = CommandBoolRequest()
