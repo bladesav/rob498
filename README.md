@@ -2,8 +2,8 @@
 
 ## Contributors
 - Savanna Blade
-- Kohava Mendelson
 - Nicole Amenta
+- Kohava Mendelson
 
 ## Project Description
 
