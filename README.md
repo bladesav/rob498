@@ -9,6 +9,26 @@
 
 Welcome to the ROB498 EngSci Capstone Project! In this project, our team was tasked with constructing a drone and endowing it with a suite of intelligent capabilities, including stationkeeping and waypoint navigation. This README file provides an overview of the project and its components.
 
+### Hardware Setup
+
+To achieve the above capabilities, the drone requires an accurate 3D pose estimate relative to its starting point. We utilized Visual-Inertial Odometry (VIO) to obtain this estimate, which determines the pose of a vehicle by combining information from camera images and inertial measurements. As part of our hardware setup, we integrated the Jetson Nano and RealSense T265 tracking camera into our existing hardware suite.
+
+**Jetson Nano:**
+The Jetson Nano serves as a companion computer to the PX4 flight controller. We installed and configured MAVROS on the Jetson Nano to establish MAVLink communication with the PX4.
+
+**RealSense T265 Tracking Camera:**
+The RealSense T265 tracking camera provides odometry information to the drone, which is crucial for VIO. We used a pre-existing ROS node, available at [this GitHub repository](https://github.com/Auterion/VIO_bridge), to bridge the camera with ROS running on the Jetson Nano. It's important to note that the camera was mounted on our chassis with forward-facing lenses, requiring us to configure the camera orientation within the VIO bridge. To achieve this, we modified the `bridge_mavros.launch` file to specify a transformation of `0.127 0 -0.0762 0 0 0` between the PX4 and the camera.
+
+### Software Frameworks
+
+The software frameworks that we chose to use in our design are detailed below.
+
+**ROS:**
+ROS offers a standardized infrastructure for communication and data exchange between various components of a robotic system. In our design, we set up a publish-subscribe messaging system that allowed our drone to make real-time control decisions based on information from its various sensors. We also made use of ROS services which facilitate more sophisticated interactions between nodes beyond basic messaging. Python was used to integrate ROS into our software solution for all of the challenge tasks.
+
+**MAVROS:**
+MAVROS is a middleware that facilitates communication between the Jetson Nano and PX4, allowing data exchange between the two systems. One such example is the exchange of odometry information from the PX4, which is transmitted to the Jetson Nano through MAVROS on the `/mavros/vision_pose/pose` topic. Additionally, the PX4 is configured to receive MAVLink messages that control the drone's flight mode. This functionality allows for remote control of the drone and is highly relevant to all challenge tasks.
+
 ## Project Files
 
 This project includes two main Python files:
@@ -23,7 +43,7 @@ This project includes two main Python files:
 
 ## Usage
 
-Each script (`challenge_2.py` and `challenge_3.py`) can be executed independently to demonstrate the respective capabilities of the drone (stationkeeping and waypoint navigation). Make sure to review the specific instructions within each script's comments or documentation for proper usage and configuration.
+
 
 ## Contributions
 
